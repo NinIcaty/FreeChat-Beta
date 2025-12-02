@@ -1,7 +1,7 @@
 import socket
 import threading
 
-SERVER = "127.0.0.1"
+SERVER = "YOUR.SERVER.IP"
 PORT = 5000
 
 def listen(sock):
