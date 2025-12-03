@@ -6,8 +6,9 @@ HOST = "0.0.0.0"
 PORT = 5000
 
 clients = {}  # socket -> username
-
-
+users = []
+PasswordProtected = False
+server_password = "test"
 # ---------------- LOGGING ---------------- #
 
 def get_log_filename():
@@ -33,11 +34,27 @@ def broadcast(message, sender_socket=None):
             except:
                 client.close()
                 del clients[client]
+# ---------------- USER-BROADCAST ---------------- #
 
+def user_broadcast(message, user):
+    """Send message to Single Client connected ."""
+    try:
+        user.send(message.encode())
+    except:
+        user.close()
+        del clients[user]
 
 # ---------------- HANDLE CLIENT ---------------- #
 
 def handle_client(sock, addr):
+    if PasswordProtected == True:
+        sock.send("PasswordProtect".encode())
+        if sock.recv(1024).decode().strip() != server_password:
+            sock.send("[SERVER]Incorrect password. Connection closed.".encode())
+            sock.close()
+            return
+        else:
+            sock.send("[SERVER]Password accepted. Joining room.".encode())
     # Ask for username
     sock.send("Enter username: ".encode())
 
@@ -52,7 +69,9 @@ def handle_client(sock, addr):
             clients[sock] = username
             sock.send(f"Welcome, {username}!\n".encode())
             broadcast(f"** {username} has joined the chat **", sock)
+            users.append(username)
             print(f"[+] {username} connected from {addr}")
+            log_message("[:SERVER:]", f"**{username} connected from {addr} **")
             break
 
     # Listen for messages
@@ -61,24 +80,31 @@ def handle_client(sock, addr):
             msg = sock.recv(1024)
             if not msg:
                 break
-
+#Commands
             text = msg.decode().strip()
-            formatted = f"{username}: {text}"
+            if text == "//:list":
+                user_broadcast(f"[Server]Current users are :-\n{users}\nIn total there are {len(users)}",sock)
+            
+#Normal            
+            else:
+                formatted = f"{username}: {text}"
 
-            # Print to server console
-            print(formatted)
+                # Print to server console
+                print(formatted)
 
-            # Log to file
-            log_message(username, text)
+                # Log to file
+                log_message(username, text)
 
-            # Send to other clients
-            broadcast(formatted, sock)
+                # Send to other clients
+                broadcast(formatted, sock)
 
         except:
             break
 
     # Handle disconnect
     print(f"[-] {username} disconnected")
+    log_message("SERVER:", f"**{username} disconnected **")
+    users.remove(username)
     broadcast(f"** {username} has left the chat **", sock)
     del clients[sock]
     sock.close()
