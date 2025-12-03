@@ -1,9 +1,9 @@
 import socket
 import threading
 
-SERVER = "demo.arul.net.in" 
+SERVER = "YOURIP" 
 PORT = 5000
-PASSWORD = "test"  
+PASSWORD = "YOURPASSWORD"  
 
 def listen(sock):
     while True:
